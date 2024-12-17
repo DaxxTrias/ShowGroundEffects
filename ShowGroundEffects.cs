@@ -1,11 +1,11 @@
-﻿using ExileCore;
+﻿using ExileCore2;
 using SharpDX;
 using System.Collections.Generic;
 using System;
 using ImGuiNET;
-using ExileCore.PoEMemory.Components;
-using ExileCore.Shared.Enums;
-using ExileCore.PoEMemory.MemoryObjects;
+using ExileCore2.PoEMemory.Components;
+using ExileCore2.Shared.Enums;
+using ExileCore2.PoEMemory.MemoryObjects;
 using Vector2 = System.Numerics.Vector2;
 using Vector3 = System.Numerics.Vector3;
 
