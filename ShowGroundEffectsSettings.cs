@@ -1,7 +1,8 @@
-﻿using ExileCore2.Shared.Attributes;
+﻿using System.Collections.Generic;
+using ExileCore2.Shared.Attributes;
 using ExileCore2.Shared.Interfaces;
 using ExileCore2.Shared.Nodes;
-using SharpDX;
+using System.Drawing;
 
 namespace ShowGroundEffects;
 
@@ -25,4 +26,6 @@ public class ShowGroundEffectsSettings : ISettings
     public ColorNode PhysicalColor { get; set; } = new ColorNode(Color.Brown);
     [Menu("Debug mode (shows encountered ground effects)")]
     public ToggleNode DebugMode { get; set; } = new ToggleNode(false);
+
+
 }
