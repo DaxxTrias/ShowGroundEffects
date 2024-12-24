@@ -1,17 +1,14 @@
-﻿using System.Collections.Generic;
-using System;
-using ImGuiNET;
-using ExileCore2;
+﻿using ExileCore2;
+using ExileCore2.PoEMemory;
 using ExileCore2.PoEMemory.Components;
-using ExileCore2.Shared.Enums;
 using ExileCore2.PoEMemory.MemoryObjects;
+using ExileCore2.Shared.Enums;
+using ImGuiNET;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
 using Vector2 = System.Numerics.Vector2;
 using Vector3 = System.Numerics.Vector3;
-using System.Drawing;
-using ExileCore2.PoEMemory;
-using ExileCore2.Shared.Helpers;
-using System.Windows.Forms;
-using System.Drawing.Design;
 
 namespace ShowGroundEffects;
 
