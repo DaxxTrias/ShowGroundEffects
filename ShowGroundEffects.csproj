@@ -38,8 +38,4 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
   </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /Y &quot;$(SolutionDir)bin\Debug\ShowGroundEffects.dll&quot; &quot;C:\Users\radra\Downloads\Thud\beep\ex\exmain\Plugins\Compiled\ShowGroundEffects\ShowGroundEffects.dll&quot;" />
-  </Target>
 </Project>
