@@ -37,86 +37,82 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
             || GameController.Area.CurrentArea.IsHideout
             || GameController.IsLoading
             || !GameController.InGame
-            || GameController.Game.IngameState.IngameUi.StashElement.IsVisibleLocal
+            || GameController.Game.IngameState.IngameUi.StashElement?.IsVisibleLocal == true
             )
             {
                 return;
             }
 
-            foreach (var daemon in GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Daemon])
+            if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Daemon, out var daemons) && daemons is not null)
             {
-                if (daemon.Path == null || !daemon.IsHostile) continue;
-                if (daemon.DistancePlayer > Settings.RenderDistance) continue;
-                if (daemon.Path.Contains("UberMapExarchDaemon"))
+                foreach (var daemon in daemons)
                 {
-                    var positioned = daemon.GetComponent<Positioned>();
-                    if (positioned == null) continue;
-                    DrawFilledCircleInWorldPosition(GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition), positioned.Size, 1, Settings.FireColor);
+                    if (daemon.Path == null || !daemon.IsHostile) continue;
+                    if (daemon.DistancePlayer > Settings.RenderDistance) continue;
+                    if (daemon.Path.Contains("UberMapExarchDaemon"))
+                    {
+                        var positioned = daemon.GetComponent<Positioned>();
+                        if (positioned == null) continue;
+                        DrawFilledCircleInWorldPosition(GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition), positioned.Size, 1, Settings.FireColor);
+                    }
                 }
             }
 
-            var effects = GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Effect];
-            foreach (var e in effects)
+            if (!GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Effect, out var effects) || effects is null)
+                return;
+            foreach (var e in effects.ToArray())
             {
                 if (e.Path == null || !e.IsHostile) continue; 
                 if (e.DistancePlayer > Settings.RenderDistance) continue;
-                if (e.Path.Contains("ground_effects"))
+                if (!e.Path.Contains("ground_effects", StringComparison.OrdinalIgnoreCase)) continue;
+                var positionedComponent = e?.GetComponent<Positioned>();
+                if (positionedComponent == null || e.Buffs == null) continue;
+                var drawColor = Color.Red;
+                foreach (var bf in e.Buffs)
                 {
-                    var positionedComponent = e?.GetComponent<Positioned>();
-                    if (positionedComponent == null || e.Buffs == null) continue;
-                    var drawColor = Color.Red;
-                    foreach (var bf in e.Buffs)
-                    {
-                        if (bf.Description.ToLower().Contains("fire") || bf.Description.ToLower().Contains("burning"))
-                        {
-                            drawColor = Settings.FireColor;
-                        }
-                        else if (bf.Description.ToLower().Contains("cold"))
-                        {
-                            drawColor = Settings.ColdColor;
-                        }
-                        else if (bf.Description.ToLower().Contains("lightning"))
-                        {
-                            drawColor = Settings.LightningColor;
-                        }
-                        else if (bf.Description.ToLower().Contains("chaos"))
-                        {
-                            drawColor = Settings.ChaosColor;
-                        }
-                        else if (bf.Description.ToLower().Contains("physical"))
-                        {
-                            drawColor = Settings.PhysicalColor;
-                        }
-                        else
-                        {
-                            drawColor = Color.HotPink;
-                            if (Settings.DebugMode)
-                            {
-                                if (!list.Contains(bf.Name))
-                                {
-                                    list.Add(bf.Name);
-                                }
-                                Graphics.DrawText(bf.Name, GameController.Game.IngameState.Camera.WorldToScreen(e.Pos));
-                                var background = new ExileCore2.Shared.RectangleF(GameController.Game.IngameState.Camera.WorldToScreen(e.Pos).X, GameController.Game.IngameState.Camera.WorldToScreen(e.Pos).Y, 150, 20);
-                                Graphics.DrawBox(background, Color.Black);
-                                
-                                DebugWindow.LogMsg(positionedComponent.GridPosition.X + " , " + positionedComponent.GridPosition.Y + " Size: " + positionedComponent.Size);
+                    var desc = bf.Description;
+                    if (string.IsNullOrEmpty(desc)) continue;
 
-                            }
-                        }
-                       var rComp =  e.GetComponent<Render>();
-                       
-                        if (drawColor != Color.Transparent)
+                    if (desc.Contains("fire", StringComparison.OrdinalIgnoreCase) || desc.Contains("burning", StringComparison.OrdinalIgnoreCase))
+                        drawColor = Settings.FireColor;
+                    else if (desc.Contains("cold", StringComparison.OrdinalIgnoreCase))
+                        drawColor = Settings.ColdColor;
+                    else if (desc.Contains("lightning", StringComparison.OrdinalIgnoreCase))
+                        drawColor = Settings.LightningColor;
+                    else if (desc.Contains("chaos", StringComparison.OrdinalIgnoreCase))
+                        drawColor = Settings.ChaosColor;
+                    else if (desc.Contains("physical", StringComparison.OrdinalIgnoreCase))
+                        drawColor = Settings.PhysicalColor;
+                    else
+                        drawColor = Color.HotPink;
+
+                    if (Settings.DebugMode)
+                    {
+                        if (!list.Contains(bf.Name))
                         {
-                            //DrawFilledCircleInWorldPosition(GameController.IngameState.Data.ToWorldWithTerrainHeight(positionedComponent.GridPosition), positionedComponent.Size, 1, drawColor);
-                          DrawCircleInWorldPos(false,e.Pos, rComp.Bounds.X*4, 5,drawColor);
-                          
+                            list.Add(bf.Name);
                         }
+                        Graphics.DrawText(bf.Name, GameController.Game.IngameState.Camera.WorldToScreen(e.Pos));
+                        var background = new ExileCore2.Shared.RectangleF(GameController.Game.IngameState.Camera.WorldToScreen(e.Pos).X, GameController.Game.IngameState.Camera.WorldToScreen(e.Pos).Y, 150, 20);
+                        Graphics.DrawBox(background, Color.Black);
+                        
+                        DebugWindow.LogMsg(positionedComponent.GridPosition.X + " , " + positionedComponent.GridPosition.Y + " Size: " + positionedComponent.Size);
+
+                    }
+                    var rComp = e.GetComponent<Render>();
+                    if (rComp is not null)
+                    {
+                        var radius = Math.Max(5f, rComp.Bounds.X * 4f);
+                        DrawCircleInWorldPos(false, e.Pos, radius, 5, drawColor);
                     }
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            if (Settings.DebugMode)
+                DebugWindow.LogMsg($"ShowGroundEffects error: {ex.Message}");
+        }
     }
     /// <summary>
     /// Draws a filled circle at the specified world position with the given radius and color.
