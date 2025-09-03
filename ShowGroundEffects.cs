@@ -16,12 +16,15 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 {
     private Camera Camera => GameController.Game.IngameState.Camera;
     List<string> list = new List<string>();
+    private readonly HashSet<string> _debugBuffNames = new();
+    private long _lastDebugLogTicks;
+    private static readonly long DebugLogIntervalTicks = TimeSpan.FromMilliseconds(500).Ticks;
 
     public override void DrawSettings()
     {
         base.DrawSettings();
 
-        foreach (var str in list)
+        foreach (var str in _debugBuffNames)
         {
             ImGui.Text(str);
         }
@@ -43,6 +46,16 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                 return;
             }
 
+            // Cache screen rectangle once per frame for culling
+            var windowRect = GameController.Window.GetWindowRectangleTimeCache;
+            var screenRect = new RectangleF
+            {
+                X = 0,
+                Y = 0,
+                Width = windowRect.Size.X,
+                Height = windowRect.Size.Y
+            };
+
             if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Daemon, out var daemons) && daemons is not null)
             {
                 foreach (var daemon in daemons)
@@ -62,49 +75,64 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                 return;
             foreach (var e in effects.ToArray())
             {
-                if (e.Path == null || !e.IsHostile) continue; 
+                if (e.Path == null || !e.IsHostile) continue;
                 if (e.DistancePlayer > Settings.RenderDistance) continue;
                 if (!e.Path.Contains("ground_effects", StringComparison.OrdinalIgnoreCase)) continue;
-                var positionedComponent = e?.GetComponent<Positioned>();
-                if (positionedComponent == null || e.Buffs == null) continue;
-                var drawColor = Color.Red;
-                foreach (var bf in e.Buffs)
+
+                var buffs = e.Buffs;
+                if (buffs == null) continue;
+
+                // Choose draw color once per effect based on its buffs
+                Color? drawColor = null;
+                string? chosenBuffName = null;
+                foreach (var bf in buffs)
                 {
                     var desc = bf.Description;
                     if (string.IsNullOrEmpty(desc)) continue;
 
                     if (desc.Contains("fire", StringComparison.OrdinalIgnoreCase) || desc.Contains("burning", StringComparison.OrdinalIgnoreCase))
-                        drawColor = Settings.FireColor;
-                    else if (desc.Contains("cold", StringComparison.OrdinalIgnoreCase))
-                        drawColor = Settings.ColdColor;
-                    else if (desc.Contains("lightning", StringComparison.OrdinalIgnoreCase))
-                        drawColor = Settings.LightningColor;
-                    else if (desc.Contains("chaos", StringComparison.OrdinalIgnoreCase))
-                        drawColor = Settings.ChaosColor;
-                    else if (desc.Contains("physical", StringComparison.OrdinalIgnoreCase))
-                        drawColor = Settings.PhysicalColor;
-                    else
-                        drawColor = Color.HotPink;
+                    { drawColor = Settings.FireColor; chosenBuffName = bf.Name; break; }
+                    if (desc.Contains("cold", StringComparison.OrdinalIgnoreCase))
+                    { drawColor = Settings.ColdColor; chosenBuffName = bf.Name; break; }
+                    if (desc.Contains("lightning", StringComparison.OrdinalIgnoreCase))
+                    { drawColor = Settings.LightningColor; chosenBuffName = bf.Name; break; }
+                    if (desc.Contains("chaos", StringComparison.OrdinalIgnoreCase))
+                    { drawColor = Settings.ChaosColor; chosenBuffName = bf.Name; break; }
+                    if (desc.Contains("physical", StringComparison.OrdinalIgnoreCase))
+                    { drawColor = Settings.PhysicalColor; chosenBuffName = bf.Name; break; }
+                }
+                drawColor ??= Color.HotPink;
 
-                    if (Settings.DebugMode)
+                // Optional debug visuals, throttled and with reduced allocations
+                if (Settings.DebugMode)
+                {
+                    if (!string.IsNullOrEmpty(chosenBuffName))
                     {
-                        if (!list.Contains(bf.Name))
+                        _debugBuffNames.Add(chosenBuffName);
+                    }
+
+                    var screen = Camera.WorldToScreen(e.Pos);
+                    Graphics.DrawText(chosenBuffName ?? e.Path, screen);
+                    var background = new ExileCore2.Shared.RectangleF(screen.X, screen.Y, 150, 20);
+                    Graphics.DrawBox(background, Color.Black);
+
+                    var nowTicks = DateTime.UtcNow.Ticks;
+                    if (nowTicks - _lastDebugLogTicks >= DebugLogIntervalTicks)
+                    {
+                        var positionedComponent = e.GetComponent<Positioned>();
+                        if (positionedComponent != null)
                         {
-                            list.Add(bf.Name);
+                            DebugWindow.LogMsg(positionedComponent.GridPosition.X + " , " + positionedComponent.GridPosition.Y + " Size: " + positionedComponent.Size);
                         }
-                        Graphics.DrawText(bf.Name, GameController.Game.IngameState.Camera.WorldToScreen(e.Pos));
-                        var background = new ExileCore2.Shared.RectangleF(GameController.Game.IngameState.Camera.WorldToScreen(e.Pos).X, GameController.Game.IngameState.Camera.WorldToScreen(e.Pos).Y, 150, 20);
-                        Graphics.DrawBox(background, Color.Black);
-                        
-                        DebugWindow.LogMsg(positionedComponent.GridPosition.X + " , " + positionedComponent.GridPosition.Y + " Size: " + positionedComponent.Size);
+                        _lastDebugLogTicks = nowTicks;
+                    }
+                }
 
-                    }
-                    var rComp = e.GetComponent<Render>();
-                    if (rComp is not null)
-                    {
-                        var radius = Math.Max(5f, rComp.Bounds.X * 4f);
-                        DrawCircleInWorldPos(false, e.Pos, radius, 5, drawColor);
-                    }
+                var rComp = e.GetComponent<Render>();
+                if (rComp is not null)
+                {
+                    var radius = Math.Max(5f, rComp.Bounds.X * 4f);
+                    DrawCircleInWorldPos(false, e.Pos, radius, 5, drawColor.Value, screenRect);
                 }
             }
         }
@@ -115,22 +143,10 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
         }
     }
     /// <summary>
-    /// Draws a filled circle at the specified world position with the given radius and color.
+    /// Draws a circle at the specified world position with the given radius and color (optionally filled).
     /// </summary>
-    /// <param name="position">The world position to draw the circle at.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <param name="color">The color of the circle.</param>
-    /// 
-    private void DrawCircleInWorldPos(bool drawFilledCircle, Vector3 position, float radius, int thickness, Color color)
+    private void DrawCircleInWorldPos(bool drawFilledCircle, Vector3 position, float radius, int thickness, Color color, RectangleF screensize)
     {
-        var screensize = new RectangleF
-        {
-            X = 0,
-            Y = 0,
-            Width = GameController.Window.GetWindowRectangleTimeCache.Size.X,
-            Height = GameController.Window.GetWindowRectangleTimeCache.Size.Y
-        };
-
         var entityPos = RemoteMemoryObject.TheGame.IngameState.Camera.WorldToScreen(position);
         if (IsEntityWithinScreen(entityPos, screensize, 50))
         {
@@ -156,22 +172,6 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     }
     private void DrawFilledCircleInWorldPosition(Vector3 position, float radius, int thickness, Color color)
     {
-        var circlePoints = new List<Vector2>();
-        const int segments = 15;
-        const float segmentAngle = 2f * MathF.PI / segments;
-
-        for (var i = 0; i < segments; i++)
-        {
-            var angle = i * segmentAngle;
-            var currentOffset = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
-            var nextOffset = new Vector2(MathF.Cos(angle + segmentAngle), MathF.Sin(angle + segmentAngle)) * radius;
-
-            var currentWorldPos = position + new Vector3(currentOffset, 0);
-            var nextWorldPos = position + new Vector3(nextOffset, 0);
-
-            circlePoints.Add(Camera.WorldToScreen(currentWorldPos));
-            circlePoints.Add(Camera.WorldToScreen(nextWorldPos));
-        }
-        Graphics.DrawConvexPolyFilled(circlePoints.ToArray(), color);
+        Graphics.DrawFilledCircleInWorld(position, radius, color);
     }
 }
