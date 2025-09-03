@@ -42,6 +42,19 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
             {
                 return;
             }
+
+            foreach (var daemon in GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Daemon])
+            {
+                if (daemon.Path == null || !daemon.IsHostile) continue;
+                if (daemon.DistancePlayer > Settings.RenderDistance) continue;
+                if (daemon.Path.Contains("UberMapExarchDaemon"))
+                {
+                    var positioned = daemon.GetComponent<Positioned>();
+                    if (positioned == null) continue;
+                    DrawFilledCircleInWorldPosition(GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition), positioned.Size, 1, Settings.FireColor);
+                }
+            }
+
             var effects = GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Effect];
             foreach (var e in effects)
             {
@@ -105,7 +118,6 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
         }
         catch { }
     }
-
     /// <summary>
     /// Draws a filled circle at the specified world position with the given radius and color.
     /// </summary>
@@ -136,7 +148,6 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
             }
         }
     }
-
     private bool IsEntityWithinScreen(Vector2 entityPos, RectangleF screensize, float allowancePX)
     {
         // Check if the entity position is within the screen bounds with allowance
