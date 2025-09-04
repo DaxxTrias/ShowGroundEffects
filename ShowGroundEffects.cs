@@ -66,7 +66,9 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                     {
                         var positioned = daemon.GetComponent<Positioned>();
                         if (positioned == null) continue;
-                        DrawFilledCircleInWorldPosition(GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition), positioned.Size, 1, Settings.FireColor);
+                        var world = GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition);
+                        // Use the culling-aware helper and cached screen rect
+                        DrawCircleInWorldPos(true, world, Math.Max(5f, positioned.Size), 1, Settings.FireColor, screenRect);
                     }
                 }
             }
@@ -142,6 +144,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                 DebugWindow.LogMsg($"ShowGroundEffects error: {ex.Message}");
         }
     }
+
     /// <summary>
     /// Draws a circle at the specified world position with the given radius and color (optionally filled).
     /// </summary>
@@ -160,6 +163,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
             }
         }
     }
+
     private bool IsEntityWithinScreen(Vector2 entityPos, RectangleF screensize, float allowancePX)
     {
         // Check if the entity position is within the screen bounds with allowance
