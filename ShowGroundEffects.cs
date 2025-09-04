@@ -75,7 +75,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 
             if (!GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Effect, out var effects) || effects is null)
                 return;
-            foreach (var e in effects.ToArray())
+            foreach (var e in effects)
             {
                 if (e.Path == null || !e.IsHostile) continue;
                 if (e.DistancePlayer > Settings.RenderDistance) continue;
@@ -174,6 +174,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 
         return entityPos.X >= leftBound && entityPos.X <= rightBound && entityPos.Y >= topBound && entityPos.Y <= bottomBound;
     }
+    
     private void DrawFilledCircleInWorldPosition(Vector3 position, float radius, int thickness, Color color)
     {
         Graphics.DrawFilledCircleInWorld(position, radius, color);
