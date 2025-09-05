@@ -27,5 +27,6 @@ public class ShowGroundEffectsSettings : ISettings
     [Menu("Debug mode (shows encountered ground effects)")]
     public ToggleNode DebugMode { get; set; } = new ToggleNode(false);
 
-
+    [Menu("Show curse zones in maps")]
+    public ToggleNode ShowCurseZones { get; set; } = new ToggleNode(true);
 }

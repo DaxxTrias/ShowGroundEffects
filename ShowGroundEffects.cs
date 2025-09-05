@@ -56,22 +56,26 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                 Height = windowRect.Size.Y
             };
 
-            if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Daemon, out var daemons) && daemons is not null)
-            {
-                foreach (var daemon in daemons)
-                {
-                    if (daemon.Path == null || !daemon.IsHostile) continue;
-                    if (daemon.DistancePlayer > Settings.RenderDistance) continue;
-                    if (daemon.Path.Contains("UberMapExarchDaemon"))
-                    {
-                        var positioned = daemon.GetComponent<Positioned>();
-                        if (positioned == null) continue;
-                        var world = GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition);
-                        // Use the culling-aware helper and cached screen rect
-                        DrawCircleInWorldPos(true, world, Math.Max(5f, positioned.Size), 1, Settings.FireColor, screenRect);
-                    }
-                }
-            }
+			if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Daemon, out var daemons) && daemons is not null)
+			{
+				foreach (var daemon in daemons)
+				{
+					if (daemon.Path == null) continue;
+					var path = daemon.Path;
+					bool isExarchDaemon = path.Contains("UberMapExarchDaemon", StringComparison.OrdinalIgnoreCase);
+					bool isCurseDaemon = path.Contains("Metadata/Monsters/Daemon/MapMod", StringComparison.OrdinalIgnoreCase) && path.EndsWith("Daemon", StringComparison.OrdinalIgnoreCase);
+					if (!isExarchDaemon && !isCurseDaemon && !daemon.IsHostile) continue;
+					if (daemon.DistancePlayer > Settings.RenderDistance) continue;
+					if (isExarchDaemon)
+					{
+						var positioned = daemon.GetComponent<Positioned>();
+						if (positioned == null) continue;
+						var world = GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition);
+						// Use the culling-aware helper and cached screen rect
+						DrawCircleInWorldPos(true, world, Math.Max(5f, positioned.Size), 1, Settings.FireColor, screenRect);
+					}
+				}
+			}
 
             if (!GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Effect, out var effects) || effects is null)
                 return;
@@ -130,20 +134,78 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                     }
                 }
 
-                var rComp = e.GetComponent<Render>();
-                if (rComp is not null)
-                {
-                    var radius = Math.Max(5f, rComp.Bounds.X * 4f);
-                    DrawCircleInWorldPos(false, e.Pos, radius, 5, drawColor.Value, screenRect);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            if (Settings.DebugMode)
-                DebugWindow.LogMsg($"ShowGroundEffects error: {ex.Message}");
-        }
-    }
+				var rComp = e.GetComponent<Render>();
+				if (rComp is not null)
+				{
+					var radius = Math.Max(5f, rComp.Bounds.X * 4f);
+					DrawCircleInWorldPos(false, e.Pos, radius, 5, drawColor.Value, screenRect);
+				}
+			}
+
+			// Additional pass: Curse zones are unique under Metadata/Monsters/CurseZones and are EntityType.None
+			{
+				var curseEntities = (IReadOnlyList<Entity>)null;
+				if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.None, out var noneList) && noneList is not null)
+				{
+					curseEntities = noneList;
+				}
+				else
+				{
+					curseEntities = GameController?.EntityListWrapper?.OnlyValidEntities;
+				}
+
+				if (curseEntities is not null)
+				{
+                    if (!Settings.ShowCurseZones)
+                        return;
+                        
+					foreach (var ent in curseEntities)
+                    {
+                        var p = ent.Path;
+                        if (string.IsNullOrEmpty(p)) continue;
+                        if (!p.Contains("CurseZones", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (ent.DistancePlayer > Settings.RenderDistance) continue;
+
+                        var positioned = ent.GetComponent<Positioned>();
+                        var renderComp = ent.GetComponent<Render>();
+
+                        float baseRadius = 0f;
+                        if (renderComp is not null)
+                        {
+                            baseRadius = Math.Max(5f, renderComp.Bounds.X * 4f);
+                        }
+                        else if (positioned is not null)
+                        {
+                            baseRadius = Math.Max(5f, positioned.Size);
+                        }
+                        else
+                        {
+                            continue;
+                        }
+
+                        var radius = baseRadius * 2.3f;
+                        Vector3 worldPos = positioned is not null
+                            ? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
+                            : ent.Pos;
+
+                        // Draw as hollow ring similar to standard ground effects
+                            DrawCircleInWorldPos(false, worldPos, radius, 5, Color.Red, screenRect);
+
+                        if (Settings.DebugMode)
+                        {
+                            var screen = Camera.WorldToScreen(worldPos);
+                            Graphics.DrawText($"CurseZone: {p}", screen);
+                        }
+                    }
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			if (Settings.DebugMode)
+				DebugWindow.LogMsg($"ShowGroundEffects error: {ex.Message}");
+		}
+	}
 
     /// <summary>
     /// Draws a circle at the specified world position with the given radius and color (optionally filled).
