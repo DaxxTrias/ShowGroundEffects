@@ -58,23 +58,25 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 
 			if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Daemon, out var daemons) && daemons is not null)
 			{
+                //Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine
+                
 				foreach (var daemon in daemons)
-				{
-					if (daemon.Path == null) continue;
-					var path = daemon.Path;
-					bool isExarchDaemon = path.Contains("UberMapExarchDaemon", StringComparison.OrdinalIgnoreCase);
-					bool isCurseDaemon = path.Contains("Metadata/Monsters/Daemon/MapMod", StringComparison.OrdinalIgnoreCase) && path.EndsWith("Daemon", StringComparison.OrdinalIgnoreCase);
-					if (!isExarchDaemon && !isCurseDaemon && !daemon.IsHostile) continue;
-					if (daemon.DistancePlayer > Settings.RenderDistance) continue;
-					if (isExarchDaemon)
-					{
-						var positioned = daemon.GetComponent<Positioned>();
-						if (positioned == null) continue;
-						var world = GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition);
-						// Use the culling-aware helper and cached screen rect
-						DrawCircleInWorldPos(true, world, Math.Max(5f, positioned.Size), 1, Settings.FireColor, screenRect);
-					}
-				}
+                {
+                    if (daemon.Path == null) continue;
+                    var path = daemon.Path;
+                    bool isExarchDaemon = path.Contains("UberMapExarchDaemon", StringComparison.OrdinalIgnoreCase);
+                    bool isCurseDaemon = path.Contains("Metadata/Monsters/Daemon/MapMod", StringComparison.OrdinalIgnoreCase) && path.EndsWith("Daemon", StringComparison.OrdinalIgnoreCase);
+                    if (!isExarchDaemon && !isCurseDaemon && !daemon.IsHostile) continue;
+                    if (daemon.DistancePlayer > Settings.RenderDistance) continue;
+                    if (isExarchDaemon)
+                    {
+                        var positioned = daemon.GetComponent<Positioned>();
+                        if (positioned == null) continue;
+                        var world = GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition);
+                        // Use the culling-aware helper and cached screen rect
+                        DrawCircleInWorldPos(true, world, Math.Max(5f, positioned.Size), 1, Settings.FireColor, screenRect);
+                    }
+                }
 			}
 
             if (!GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Effect, out var effects) || effects is null)
