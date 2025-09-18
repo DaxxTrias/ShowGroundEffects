@@ -29,4 +29,7 @@ public class ShowGroundEffectsSettings : ISettings
 
     [Menu("Show curse zones in maps")]
     public ToggleNode ShowCurseZones { get; set; } = new ToggleNode(true);
+
+    [Menu("Show Abyss Crystal Mines")]
+    public ToggleNode ShowAbyssCrystalMines { get; set; } = new ToggleNode(true);
 }

@@ -146,59 +146,100 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 
 			// Additional pass: Curse zones are unique under Metadata/Monsters/CurseZones and are EntityType.None
 			{
-				var curseEntities = (IReadOnlyList<Entity>)null;
+				var noneEntities = (IReadOnlyList<Entity>)null;
 				if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.None, out var noneList) && noneList is not null)
 				{
-					curseEntities = noneList;
+					noneEntities = noneList;
 				}
 				else
 				{
-					curseEntities = GameController?.EntityListWrapper?.OnlyValidEntities;
+					noneEntities = GameController?.EntityListWrapper?.OnlyValidEntities;
 				}
 
-				if (curseEntities is not null)
+				if (noneEntities is not null)
 				{
-                    if (!Settings.ShowCurseZones)
-                        return;
-                        
-					foreach (var ent in curseEntities)
-                    {
-                        var p = ent.Path;
-                        if (string.IsNullOrEmpty(p)) continue;
-                        if (!p.Contains("CurseZones", StringComparison.OrdinalIgnoreCase)) continue;
-                        if (ent.DistancePlayer > Settings.RenderDistance) continue;
+					// 1) Curse zones (keep expanded radius)
+					if (Settings.ShowCurseZones)
+					{
+						foreach (var ent in noneEntities)
+						{
+							var p = ent.Path;
+							if (string.IsNullOrEmpty(p)) continue;
+							if (!p.Contains("CurseZones", StringComparison.OrdinalIgnoreCase)) continue;
+							if (ent.DistancePlayer > Settings.RenderDistance) continue;
 
-                        var positioned = ent.GetComponent<Positioned>();
-                        var renderComp = ent.GetComponent<Render>();
+							var positioned = ent.GetComponent<Positioned>();
+							var renderComp = ent.GetComponent<Render>();
 
-                        float baseRadius = 0f;
-                        if (renderComp is not null)
-                        {
-                            baseRadius = Math.Max(5f, renderComp.Bounds.X * 4f);
-                        }
-                        else if (positioned is not null)
-                        {
-                            baseRadius = Math.Max(5f, positioned.Size);
-                        }
-                        else
-                        {
-                            continue;
-                        }
+							float baseRadius = 0f;
+							if (renderComp is not null)
+							{
+								baseRadius = Math.Max(5f, renderComp.Bounds.X * 4f);
+							}
+							else if (positioned is not null)
+							{
+								baseRadius = Math.Max(5f, positioned.Size);
+							}
+							else
+							{
+								continue;
+							}
 
-                        var radius = baseRadius * 2.3f;
-                        Vector3 worldPos = positioned is not null
-                            ? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
-                            : ent.Pos;
+							var radius = baseRadius * 2.3f;
+							Vector3 worldPos = positioned is not null
+								? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
+								: ent.Pos;
 
-                        // Draw as hollow ring similar to standard ground effects
-                            DrawCircleInWorldPos(false, worldPos, radius, 5, Color.Red, screenRect);
+							DrawCircleInWorldPos(false, worldPos, radius, 5, Color.Red, screenRect);
 
-                        if (Settings.DebugMode)
-                        {
-                            var screen = Camera.WorldToScreen(worldPos);
-                            Graphics.DrawText($"CurseZone: {p}", screen);
-                        }
-                    }
+							if (Settings.DebugMode)
+							{
+								var screen = Camera.WorldToScreen(worldPos);
+								Graphics.DrawText($"CurseZone: {p}", screen);
+							}
+						}
+					}
+
+					// 2) Abyss Crystal Mine metadata (standard radius, no expansion)
+					if (Settings.ShowAbyssCrystalMines)
+					{
+						const string AbyssMineMeta = "Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine";
+						foreach (var ent in noneEntities)
+						{
+							var p = ent.Path;
+							if (!string.Equals(p, AbyssMineMeta, StringComparison.OrdinalIgnoreCase)) continue;
+							if (ent.DistancePlayer > Settings.RenderDistance) continue;
+
+							var positioned = ent.GetComponent<Positioned>();
+							var renderComp = ent.GetComponent<Render>();
+
+							float radius;
+							if (renderComp is not null)
+							{
+								radius = Math.Max(5f, renderComp.Bounds.X * 1f);
+							}
+							else if (positioned is not null)
+							{
+								radius = Math.Max(5f, positioned.Size);
+							}
+							else
+							{
+								continue;
+							}
+
+							Vector3 worldPos = positioned is not null
+								? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
+								: ent.Pos;
+
+							DrawCircleInWorldPos(false, worldPos, radius, 5, Color.Lime, screenRect);
+
+							if (Settings.DebugMode)
+							{
+								var screen = Camera.WorldToScreen(worldPos);
+								Graphics.DrawText("AbyssCrystalMine", screen);
+							}
+						}
+					}
 				}
 			}
 		}
