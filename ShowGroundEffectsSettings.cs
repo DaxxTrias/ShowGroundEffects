@@ -27,9 +27,9 @@ public class ShowGroundEffectsSettings : ISettings
     [Menu("Debug mode (shows encountered ground effects)")]
     public ToggleNode DebugMode { get; set; } = new ToggleNode(false);
 
-    [Menu("Show curse zones in maps")]
+    [Menu("Show Curse Zones in maps", "Show Map-Modifier curses on the ground")]
     public ToggleNode ShowCurseZones { get; set; } = new ToggleNode(true);
 
-    [Menu("Show Abyss Crystal Mines")]
+    [Menu("Show Abyss Crystal Mines", "show Abyss Crystal Proximity Mines")]
     public ToggleNode ShowAbyssCrystalMines { get; set; } = new ToggleNode(true);
 }
