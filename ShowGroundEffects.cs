@@ -95,6 +95,17 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 
             if (!GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Effect, out var effects) || effects is null)
                 return;
+
+            // Pass 0: metadata-driven hostiles that live under EntityType.Effect (e.g., ice spikes)
+            if (Settings.ShowOtherHostileEffects)
+            {
+                var extraTargets = GetOtherHostileEffectMetadataSet();
+                if (extraTargets.Count > 0)
+                {
+                    DrawMetadataMatches(effects, extraTargets, 1f, Settings.OtherHostileEffectsColor.Value, "OtherHostileEffect", screenRect, requireHostile: true);
+                }
+            }
+
             foreach (var e in effects)
             {
                 if (e.Path == null || !e.IsHostile) continue;
@@ -274,7 +285,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
         Graphics.DrawFilledCircleInWorld(position, radius, color);
     }
 
-	private void DrawMetadataMatches(IEnumerable<Entity> entities, IReadOnlyDictionary<string, Color> metadataTargets, float radiusMultiplier, Color fallbackColor, string debugLabel, RectangleF screenRect)
+	private void DrawMetadataMatches(IEnumerable<Entity> entities, IReadOnlyDictionary<string, Color> metadataTargets, float radiusMultiplier, Color fallbackColor, string debugLabel, RectangleF screenRect, bool requireHostile = false)
 	{
 		if (metadataTargets.Count == 0) return;
 
@@ -284,6 +295,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 			if (string.IsNullOrEmpty(path)) continue;
 			var hasColor = metadataTargets.TryGetValue(path, out var drawColor);
 			if (!hasColor) continue;
+			if (requireHostile && !ent.IsHostile) continue;
 			if (ent.DistancePlayer > Settings.RenderDistance) continue;
 
 			var positioned = ent.GetComponent<Positioned>();
