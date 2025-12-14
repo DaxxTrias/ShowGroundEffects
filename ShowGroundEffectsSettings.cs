@@ -32,4 +32,13 @@ public class ShowGroundEffectsSettings : ISettings
 
     [Menu("Show Abyss Crystal Mines", "show Abyss Crystal Proximity Mines")]
     public ToggleNode ShowAbyssCrystalMines { get; set; } = new ToggleNode(true);
+
+    [Menu("Other Hostile Effects", "Enable drawing for extra hostile metadata targets")]
+    public ToggleNode ShowOtherHostileEffects { get; set; } = new ToggleNode(true);
+
+    [Menu("Other Hostile Effects Color", parentIndex = 110)]
+    public ColorNode OtherHostileEffectsColor { get; set; } = new ColorNode(Color.Red);
+
+    [Menu("Other Hostile Effects Metadata", "One metadata path per line; optional |#RRGGBB to override color; exact match; case-insensitive", parentIndex = 110)]
+    public TextNode OtherHostileEffectMetadata { get; set; } = new TextNode("Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule|#FF0000");
 }

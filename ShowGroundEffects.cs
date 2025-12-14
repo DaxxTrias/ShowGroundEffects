@@ -17,6 +17,12 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     private Camera Camera => GameController.Game.IngameState.Camera;
     List<string> list = new List<string>();
     private readonly HashSet<string> _debugBuffNames = new();
+    private static readonly Dictionary<string, Color> AbyssMineMetadata = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine", Color.Lime }
+    };
+    private readonly Dictionary<string, Color> _otherHostileEffectMetaColors = new(StringComparer.OrdinalIgnoreCase);
+    private string _otherHostileEffectRaw = string.Empty;
     private long _lastDebugLogTicks;
     private static readonly long DebugLogIntervalTicks = TimeSpan.FromMilliseconds(500).Ticks;
 
@@ -203,41 +209,16 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 					// 2) Abyss Crystal Mine metadata (standard radius, no expansion)
 					if (Settings.ShowAbyssCrystalMines)
 					{
-						const string AbyssMineMeta = "Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine";
-						foreach (var ent in noneEntities)
+						DrawMetadataMatches(noneEntities, AbyssMineMetadata, 1f, Color.Lime, "AbyssCrystalMine", screenRect);
+					}
+
+					// 3) Additional hostile effects (configurable metadata list)
+					if (Settings.ShowOtherHostileEffects)
+					{
+						var extraTargets = GetOtherHostileEffectMetadataSet();
+						if (extraTargets.Count > 0)
 						{
-							var p = ent.Path;
-							if (!string.Equals(p, AbyssMineMeta, StringComparison.OrdinalIgnoreCase)) continue;
-							if (ent.DistancePlayer > Settings.RenderDistance) continue;
-
-							var positioned = ent.GetComponent<Positioned>();
-							var renderComp = ent.GetComponent<Render>();
-
-							float radius;
-							if (renderComp is not null)
-							{
-								radius = Math.Max(5f, renderComp.Bounds.X * 1f);
-							}
-							else if (positioned is not null)
-							{
-								radius = Math.Max(5f, positioned.Size);
-							}
-							else
-							{
-								continue;
-							}
-
-							Vector3 worldPos = positioned is not null
-								? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
-								: ent.Pos;
-
-							DrawCircleInWorldPos(false, worldPos, radius, 5, Color.Lime, screenRect);
-
-							if (Settings.DebugMode)
-							{
-								var screen = Camera.WorldToScreen(worldPos);
-								Graphics.DrawText("AbyssCrystalMine", screen);
-							}
+							DrawMetadataMatches(noneEntities, extraTargets, 1f, Settings.OtherHostileEffectsColor.Value, "OtherHostileEffect", screenRect);
 						}
 					}
 				}
@@ -284,4 +265,98 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     {
         Graphics.DrawFilledCircleInWorld(position, radius, color);
     }
+
+	private void DrawMetadataMatches(IEnumerable<Entity> entities, IReadOnlyDictionary<string, Color> metadataTargets, float radiusMultiplier, Color fallbackColor, string debugLabel, RectangleF screenRect)
+	{
+		if (metadataTargets.Count == 0) return;
+
+		foreach (var ent in entities)
+		{
+			var path = ent.Path;
+			if (string.IsNullOrEmpty(path)) continue;
+			var hasColor = metadataTargets.TryGetValue(path, out var drawColor);
+			if (!hasColor) continue;
+			if (ent.DistancePlayer > Settings.RenderDistance) continue;
+
+			var positioned = ent.GetComponent<Positioned>();
+			var renderComp = ent.GetComponent<Render>();
+
+			float radius;
+			if (renderComp is not null)
+			{
+				radius = Math.Max(5f, renderComp.Bounds.X * radiusMultiplier);
+			}
+			else if (positioned is not null)
+			{
+				radius = Math.Max(5f, positioned.Size * radiusMultiplier);
+			}
+			else
+			{
+				continue;
+			}
+
+			Vector3 worldPos = positioned is not null
+				? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
+				: ent.Pos;
+
+			DrawCircleInWorldPos(false, worldPos, radius, 5, hasColor ? drawColor : fallbackColor, screenRect);
+
+			if (Settings.DebugMode)
+			{
+				var screen = Camera.WorldToScreen(worldPos);
+				Graphics.DrawText($"{debugLabel}: {path}", screen);
+			}
+		}
+	}
+
+	private IReadOnlyDictionary<string, Color> GetOtherHostileEffectMetadataSet()
+	{
+		var raw = Settings.OtherHostileEffectMetadata?.Value ?? string.Empty;
+		if (string.Equals(raw, _otherHostileEffectRaw, StringComparison.Ordinal))
+			return _otherHostileEffectMetaColors;
+
+		_otherHostileEffectRaw = raw;
+		_otherHostileEffectMetaColors.Clear();
+
+		var segments = raw.Split(new[] { '\r', '\n', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+		foreach (var segment in segments)
+		{
+			var cleaned = segment.Trim();
+			if (cleaned.Length == 0) continue;
+
+			var color = Settings.OtherHostileEffectsColor.Value; // default per-line fallback
+			var meta = cleaned;
+
+			var pipeIdx = cleaned.IndexOf('|');
+			if (pipeIdx > 0 && pipeIdx < cleaned.Length - 1)
+			{
+				meta = cleaned[..pipeIdx].Trim();
+				var colorText = cleaned[(pipeIdx + 1)..].Trim();
+				if (!TryParseColor(colorText, out color))
+				{
+					color = Settings.OtherHostileEffectsColor;
+				}
+			}
+
+			if (meta.Length == 0) continue;
+			_otherHostileEffectMetaColors[meta] = color;
+		}
+
+		return _otherHostileEffectMetaColors;
+	}
+
+	private static bool TryParseColor(string text, out Color color)
+	{
+		// Try HTML/hex via ColorTranslator; supports #RRGGBB or named colors
+		try
+		{
+			color = ColorTranslator.FromHtml(text);
+			return true;
+		}
+		catch
+		{
+			color = default;
+			return false;
+		}
+	}
 }
