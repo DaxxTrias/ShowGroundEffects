@@ -8,12 +8,6 @@ namespace ShowGroundEffects;
 
 public class ShowGroundEffectsSettings : ISettings
 {
-    private static readonly string DefaultOtherHostileEffectsMetadata = string.Join('\n', new[]
-    {
-        "Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule|#FF0000",
-        "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBoss3Pustule|#FF0000",
-    });
-
     public ToggleNode Enable { get; set; } = new ToggleNode(false);
 
     [Menu("Render distance")]
@@ -45,6 +39,6 @@ public class ShowGroundEffectsSettings : ISettings
     [Menu("Other Hostile Effects Color", parentIndex = 110)]
     public ColorNode OtherHostileEffectsColor { get; set; } = new ColorNode(Color.Red);
 
-    [Menu("Other Hostile Effects Metadata", "One metadata path per line; optional |#RRGGBB to override color; exact match; case-insensitive", parentIndex = 110)]
-    public TextNode OtherHostileEffectMetadata { get; set; } = new TextNode(DefaultOtherHostileEffectsMetadata);
+    [Menu("Other Hostile Effects Metadata", "Optional; one metadata path per line; add |#RRGGBB to override color; exact match; case-insensitive. Built-in defaults are applied automatically.", parentIndex = 110)]
+    public TextNode OtherHostileEffectMetadata { get; set; } = new TextNode(string.Empty);
 }

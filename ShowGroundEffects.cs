@@ -21,6 +21,11 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     {
         { "Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine", Color.Lime }
     };
+    private static readonly Dictionary<string, Color> OtherHostileEffectDefaults = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule", Color.Red },
+        { "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBoss3Pustule", Color.Red },
+    };
     private readonly Dictionary<string, Color> _otherHostileEffectMetaColors = new(StringComparer.OrdinalIgnoreCase);
     private string _otherHostileEffectRaw = string.Empty;
     private long _lastDebugLogTicks;
@@ -317,6 +322,12 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 
 		_otherHostileEffectRaw = raw;
 		_otherHostileEffectMetaColors.Clear();
+
+		// Seed with built-in defaults so they always render even if user config is empty/malformed.
+		foreach (var kvp in OtherHostileEffectDefaults)
+		{
+			_otherHostileEffectMetaColors[kvp.Key] = kvp.Value;
+		}
 
 		var segments = raw.Split(new[] { '\r', '\n', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
 		foreach (var segment in segments)
