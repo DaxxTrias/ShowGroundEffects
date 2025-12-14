@@ -8,9 +8,11 @@ namespace ShowGroundEffects;
 
 public class ShowGroundEffectsSettings : ISettings
 {
-    private const string DefaultOtherHostileEffectsMetadata =
-        "Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule|#FF0000\n" +
-        "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBoss3Pustule|#FF0000";
+    private static readonly string DefaultOtherHostileEffectsMetadata = string.Join('\n', new[]
+    {
+        "Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule|#FF0000",
+        "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBoss3Pustule|#FF0000",
+    });
 
     public ToggleNode Enable { get; set; } = new ToggleNode(false);
 
