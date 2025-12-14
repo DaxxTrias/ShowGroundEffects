@@ -25,6 +25,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     {
         { "Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule", Color.Red },
         { "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBoss3Pustule", Color.Red },
+        { "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBossJadeStabSpike", Color.Red },
     };
     private readonly Dictionary<string, Color> _otherHostileEffectMetaColors = new(StringComparer.OrdinalIgnoreCase);
     private string _otherHostileEffectRaw = string.Empty;
