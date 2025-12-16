@@ -26,7 +26,8 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
         { "Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule", Color.Red }, // A4 giants
         { "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBoss3Pustule", Color.Red }, // A4 tavakai
         { "Metadata/Monsters/KaruiChieftain/objects/KaruiCaptainBossJadeStabSpike", Color.Red }, // A4 tavakai
-        { "Metadata/Effects/Spells/monsters_effects/Act1_FOUR/CarrionCrone/IceSpike", Color.Blue }, //Ice Hag boss A5-Ogham
+        { "Metadata/Effects/Spells/monsters_effects/Act1_FOUR/CarrionCrone/IceSpike", Color.Blue }, // Ice Hag boss A5-Ogham
+		{ "Metadata/Monsters/Procession/Procession04/rain_of_arrow_down", Color.Yellow }, // Vaal Temple archers
         { "Metadata/Monsters/Strongbox/Daemon/IceSpike", Color.Blue }, // generic ice hag spikes
     };
     private readonly Dictionary<string, Color> _otherHostileEffectMetaColors = new(StringComparer.OrdinalIgnoreCase);
