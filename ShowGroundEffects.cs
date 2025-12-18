@@ -18,8 +18,9 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     List<string> list = new List<string>();
     private readonly HashSet<string> _debugBuffNames = new();
     private static readonly Dictionary<string, Color> AbyssMineMetadata = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine", Color.Lime }
+	{
+		{ "Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine", Color.Lime },
+		{ "Metadata/Monsters/MonsterMods/LeagueAbyss/ExplosiveCrystalWaller/AbyssCrystalMine", Color.Lime },
     };
     private static readonly Dictionary<string, Color> OtherHostileEffectDefaults = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -240,6 +241,28 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 						{
 							DrawMetadataMatches(noneEntities, extraTargets, 1f, Settings.OtherHostileEffectsColor.Value, "OtherHostileEffect", screenRect);
 						}
+					}
+				}
+			}
+
+			// Carveout: Check EntityType.MonsterMods for Abyss Mines and Other Hostile Effects
+			// Some hostile effects (e.g., Metadata/Monsters/MonsterMods/LeagueAbyss/ExplosiveCrystalWaller/AbyssCrystalMine)
+			// appear as MonsterMods rather than Effect or None
+			if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.MonsterMods, out var monsterMods) && monsterMods is not null)
+			{
+				// Check Abyss Crystal Mines in MonsterMods
+				if (Settings.ShowAbyssCrystalMines)
+				{
+					DrawMetadataMatches(monsterMods, AbyssMineMetadata, 1f, Color.Lime, "AbyssCrystalMine[MonsterMods]", screenRect);
+				}
+
+				// Check Other Hostile Effects in MonsterMods
+				if (Settings.ShowOtherHostileEffects)
+				{
+					var extraTargets = GetOtherHostileEffectMetadataSet();
+					if (extraTargets.Count > 0)
+					{
+						DrawMetadataMatches(monsterMods, extraTargets, 1f, Settings.OtherHostileEffectsColor.Value, "OtherHostileEffect[MonsterMods]", screenRect);
 					}
 				}
 			}
