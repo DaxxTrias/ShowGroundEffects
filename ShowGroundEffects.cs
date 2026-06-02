@@ -1,4 +1,4 @@
-﻿using ExileCore2;
+using ExileCore2;
 using ExileCore2.PoEMemory;
 using ExileCore2.PoEMemory.Components;
 using ExileCore2.PoEMemory.MemoryObjects;
@@ -20,6 +20,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     private static readonly Dictionary<string, Color> AbyssMineMetadata = new(StringComparer.OrdinalIgnoreCase)
 	{
 		{ "Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine", Color.Lime },
+		{ "Metadata/Monsters/LeagueAbyss/Blackblood/Cretin/BlackbloodRemnant", Color.Lime },
 		{ "Metadata/Monsters/MonsterMods/LeagueAbyss/ExplosiveCrystalWaller/AbyssCrystalMine", Color.Lime },
     };
     private static readonly Dictionary<string, Color> OtherHostileEffectDefaults = new(StringComparer.OrdinalIgnoreCase)
@@ -264,6 +265,15 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 					{
 						DrawMetadataMatches(monsterMods, extraTargets, 1f, Settings.OtherHostileEffectsColor.Value, "OtherHostileEffect[MonsterMods]", screenRect);
 					}
+				}
+			}
+
+			// Carveout: BlackbloodRemnant abyss mines can be classified as Monster despite behaving like abyss objects.
+			if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Monster, out var monsters) && monsters is not null)
+			{
+				if (Settings.ShowAbyssCrystalMines)
+				{
+					DrawMetadataMatches(monsters, AbyssMineMetadata, 1f, Color.Lime, "AbyssCrystalMine[Monster]", screenRect);
 				}
 			}
 		}
