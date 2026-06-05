@@ -23,6 +23,11 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 		{ "Metadata/Monsters/LeagueAbyss/Blackblood/Cretin/BlackbloodRemnant", Color.Lime },
 		{ "Metadata/Monsters/MonsterMods/LeagueAbyss/ExplosiveCrystalWaller/AbyssCrystalMine", Color.Lime },
     };
+    private const string LightlessWellWarningText = "Anti-Loot Cloud";
+    private static readonly Dictionary<string, Color> LightlessWellMetadata = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Metadata/Monsters/MonsterMods/LeagueAbyss/LightlessWells/LightlessWell", Color.OrangeRed },
+    };
     private static readonly Dictionary<string, Color> OtherHostileEffectDefaults = new(StringComparer.OrdinalIgnoreCase)
     {
         { "Metadata/Monsters/BloodFeverKarui/BloodFeverBloater/Objects/BloodFeverPustule", Color.Red }, // A4 giants
@@ -234,7 +239,13 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 						DrawMetadataMatches(noneEntities, AbyssMineMetadata, 1f, Color.Lime, "AbyssCrystalMine", screenRect);
 					}
 
-					// 3) Additional hostile effects (configurable metadata list)
+					// 3) Lightless Wells punish deaths inside the fog with sharply reduced loot.
+					if (Settings.ShowLightlessWells)
+					{
+						DrawLightlessWells(noneEntities, "LightlessWell", screenRect);
+					}
+
+					// 4) Additional hostile effects (configurable metadata list)
 					if (Settings.ShowOtherHostileEffects)
 					{
 						var extraTargets = GetOtherHostileEffectMetadataSet();
@@ -257,6 +268,12 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 					DrawMetadataMatches(monsterMods, AbyssMineMetadata, 1f, Color.Lime, "AbyssCrystalMine[MonsterMods]", screenRect);
 				}
 
+				// Check Lightless Wells in MonsterMods
+				if (Settings.ShowLightlessWells)
+				{
+					DrawLightlessWells(monsterMods, "LightlessWell[MonsterMods]", screenRect);
+				}
+
 				// Check Other Hostile Effects in MonsterMods
 				if (Settings.ShowOtherHostileEffects)
 				{
@@ -274,6 +291,11 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 				if (Settings.ShowAbyssCrystalMines)
 				{
 					DrawMetadataMatches(monsters, AbyssMineMetadata, 1f, Color.Lime, "AbyssCrystalMine[Monster]", screenRect);
+				}
+
+				if (Settings.ShowLightlessWells)
+				{
+					DrawLightlessWells(monsters, "LightlessWell[Monster]", screenRect);
 				}
 			}
 		}
@@ -319,7 +341,21 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
         Graphics.DrawFilledCircleInWorld(position, radius, color);
     }
 
-	private void DrawMetadataMatches(IEnumerable<Entity> entities, IReadOnlyDictionary<string, Color> metadataTargets, float radiusMultiplier, Color fallbackColor, string debugLabel, RectangleF screenRect, bool requireHostile = false)
+	private void DrawLightlessWells(IEnumerable<Entity> entities, string debugLabel, RectangleF screenRect)
+	{
+		DrawMetadataMatches(
+			entities,
+			LightlessWellMetadata,
+			1f,
+			Settings.LightlessWellColor.Value,
+			debugLabel,
+			screenRect,
+			overlayText: LightlessWellWarningText,
+			overlayTextColor: Settings.LightlessWellTextColor.Value,
+			colorOverride: Settings.LightlessWellColor.Value);
+	}
+
+	private void DrawMetadataMatches(IEnumerable<Entity> entities, IReadOnlyDictionary<string, Color> metadataTargets, float radiusMultiplier, Color fallbackColor, string debugLabel, RectangleF screenRect, bool requireHostile = false, string? overlayText = null, Color? overlayTextColor = null, Color? colorOverride = null)
 	{
 		if (metadataTargets.Count == 0) return;
 
@@ -353,7 +389,18 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 				? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
 				: ent.Pos;
 
-			DrawCircleInWorldPos(false, worldPos, radius, 5, hasColor ? drawColor : fallbackColor, screenRect);
+			DrawCircleInWorldPos(false, worldPos, radius, 5, colorOverride ?? (hasColor ? drawColor : fallbackColor), screenRect);
+
+			if (!string.IsNullOrEmpty(overlayText))
+			{
+				var screen = Camera.WorldToScreen(worldPos);
+				if (IsEntityWithinScreen(screen, screenRect, 50))
+				{
+					var textPos = new Vector2(screen.X, screen.Y - ImGui.GetTextLineHeight() / 2f);
+					Graphics.DrawText(overlayText, textPos + new Vector2(1f, 1f), Color.Black, FontAlign.Center);
+					Graphics.DrawText(overlayText, textPos, overlayTextColor ?? Color.White, FontAlign.Center);
+				}
+			}
 
 			if (Settings.DebugMode)
 			{

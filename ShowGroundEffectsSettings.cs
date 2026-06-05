@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using ExileCore2.Shared.Attributes;
 using ExileCore2.Shared.Interfaces;
 using ExileCore2.Shared.Nodes;
@@ -32,6 +32,15 @@ public class ShowGroundEffectsSettings : ISettings
 
     [Menu("Show Abyss Crystal Mines", "show Abyss Crystal Proximity Mines")]
     public ToggleNode ShowAbyssCrystalMines { get; set; } = new ToggleNode(true);
+
+    [Menu("Show Lightless Wells", "Show Abyss Lightless Well anti-loot clouds")]
+    public ToggleNode ShowLightlessWells { get; set; } = new ToggleNode(true);
+
+    [Menu("Lightless Well Circle Color")]
+    public ColorNode LightlessWellColor { get; set; } = new ColorNode(Color.OrangeRed);
+
+    [Menu("Lightless Well Text Color")]
+    public ColorNode LightlessWellTextColor { get; set; } = new ColorNode(Color.White);
 
     [Menu("Other Hostile Effects", "Enable drawing for extra hostile metadata targets")]
     public ToggleNode ShowOtherHostileEffects { get; set; } = new ToggleNode(true);
