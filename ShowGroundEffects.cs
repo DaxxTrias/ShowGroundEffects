@@ -43,6 +43,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     private static readonly long DebugLogIntervalTicks = TimeSpan.FromMilliseconds(500).Ticks;
 	private const float CurseZoneRadiusMultiplier = 2.3f;
 	private const float FriendlyTotemRadiusMultiplier = CurseZoneRadiusMultiplier * 0.4f;
+	private const float FriendlyTotemFallbackBaseRadius = 20f;
 	private const string FriendlySpellTotemMetadata = "Metadata/Monsters/Totems/SpellTotem";
 
     public override void DrawSettings()
@@ -293,10 +294,13 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 					DrawLightlessWells(monsters, "LightlessWell[Monster]", screenRect);
 				}
 
-				if (Settings.ShowFriendlyTotems)
-				{
-					DrawFriendlyTotems(monsters, screenRect);
-				}
+			}
+
+			if (Settings.ShowFriendlyTotems)
+			{
+				// Friendly spell totems have been observed in OnlyValidEntities without reliably
+				// appearing in the EntityType.Monster dictionary.
+				DrawFriendlyTotems(entityListWrapper.OnlyValidEntities, screenRect, "FriendlyTotem[OnlyValid]");
 			}
 		}
 		catch (Exception ex)
@@ -355,24 +359,35 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 			colorOverride: Settings.LightlessWellColor.Value);
 	}
 
-	private void DrawFriendlyTotems(IEnumerable<Entity> entities, RectangleF screenRect)
+	private void DrawFriendlyTotems(IEnumerable<Entity> entities, RectangleF screenRect, string debugLabel)
 	{
 		foreach (var ent in entities)
 		{
 			var path = ent.Path;
-			if (!string.Equals(path, FriendlySpellTotemMetadata, StringComparison.OrdinalIgnoreCase)) continue;
+			if (!IsFriendlySpellTotemMetadata(path)) continue;
 			if (ent.IsHostile) continue;
 			if (ent.DistancePlayer > Settings.RenderDistance) continue;
-			if (!TryGetWorldCircle(ent, out var worldPos, out var baseRadius)) continue;
+			if (!TryGetWorldCircle(ent, out var worldPos, out var baseRadius))
+			{
+				worldPos = ent.Pos;
+				baseRadius = FriendlyTotemFallbackBaseRadius;
+			}
 
 			DrawCircleInWorldPos(false, worldPos, baseRadius * FriendlyTotemRadiusMultiplier, 5, Settings.FriendlyTotemColor.Value, screenRect);
 
 			if (Settings.DebugMode)
 			{
 				var screen = Camera.WorldToScreen(worldPos);
-				Graphics.DrawText($"FriendlyTotem: {path}", screen);
+				Graphics.DrawText($"{debugLabel}: {path}", screen);
 			}
 		}
+	}
+
+	private static bool IsFriendlySpellTotemMetadata(string? path)
+	{
+		if (string.IsNullOrEmpty(path)) return false;
+		return string.Equals(path, FriendlySpellTotemMetadata, StringComparison.OrdinalIgnoreCase)
+			|| path.StartsWith(FriendlySpellTotemMetadata + "@", StringComparison.OrdinalIgnoreCase);
 	}
 
 	private bool TryGetWorldCircle(Entity entity, out Vector3 worldPos, out float baseRadius)
