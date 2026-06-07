@@ -218,17 +218,15 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 								continue;
 							}
 
-							var radius = baseRadius * 2.3f;
-							Vector3 worldPos = positioned is not null
-								? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
-								: ent.Pos;
+							var radius = baseRadius * CurseZoneRadiusMultiplier;
+							var drawColor = ent.IsHostile ? Color.Red : Settings.FriendlyCurseZoneColor.Value;
 
-							DrawCircleInWorldPos(false, worldPos, radius, 5, Color.Red, screenRect);
+							DrawCircleInWorldPos(false, worldPos, radius, 5, drawColor, screenRect);
 
 							if (Settings.DebugMode)
 							{
 								var screen = Camera.WorldToScreen(worldPos);
-								Graphics.DrawText($"CurseZone: {p}", screen);
+								Graphics.DrawText($"CurseZone ({(ent.IsHostile ? "Hostile" : "Friendly")}): {p}", screen);
 							}
 						}
 					}
