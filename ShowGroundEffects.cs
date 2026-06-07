@@ -365,6 +365,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 		{
 			var path = ent.Path;
 			if (!IsFriendlySpellTotemMetadata(path)) continue;
+			if (ent.IsDead) continue;
 			if (ent.IsHostile) continue;
 			if (ent.DistancePlayer > Settings.RenderDistance) continue;
 			if (!TryGetWorldCircle(ent, out var worldPos, out var baseRadius))
