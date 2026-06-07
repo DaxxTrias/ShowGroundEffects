@@ -13,7 +13,7 @@ public class ShowGroundEffectsSettings : ISettings
     [Menu("Render distance")]
     public RangeNode<int> RenderDistance { get; set; } = new RangeNode<int>(80, 0, 100);
     [Menu("If you want to hide an element, set the color transparency to max", 100)]
-    public EmptyNode Description { get; set; }
+    public EmptyNode Description { get; set; } = new EmptyNode();
     [Menu("Fire damage", parentIndex = 100)]
     public ColorNode FireColor { get; set; } = new ColorNode(Color.Red);
     [Menu("Cold damage", parentIndex = 100)]
@@ -28,7 +28,16 @@ public class ShowGroundEffectsSettings : ISettings
     public ToggleNode DebugMode { get; set; } = new ToggleNode(false);
 
     [Menu("Show Curse Zones in maps", "Show Map-Modifier curses on the ground")]
-    public ToggleNode ShowCurseZones { get; set; } = new ToggleNode(true);
+    public ToggleNode ShowCurseZones { get; set; } = new ToggleNode(false);
+
+    [Menu("Friendly Curse Zone Color", "Color used for non-hostile curse zones")]
+    public ColorNode FriendlyCurseZoneColor { get; set; } = new ColorNode(Color.Blue);
+
+    [Menu("Show Friendly Totems", "Show non-hostile spell totems")]
+    public ToggleNode ShowFriendlyTotems { get; set; } = new ToggleNode(false);
+
+    [Menu("Friendly Totem Color", "Color used for non-hostile spell totems")]
+    public ColorNode FriendlyTotemColor { get; set; } = new ColorNode(Color.Blue);
 
     [Menu("Show Abyss Crystal Mines", "show Abyss Crystal Proximity Mines")]
     public ToggleNode ShowAbyssCrystalMines { get; set; } = new ToggleNode(true);

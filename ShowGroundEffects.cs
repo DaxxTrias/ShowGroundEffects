@@ -41,6 +41,9 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     private string _otherHostileEffectRaw = string.Empty;
     private long _lastDebugLogTicks;
     private static readonly long DebugLogIntervalTicks = TimeSpan.FromMilliseconds(500).Ticks;
+	private const float CurseZoneRadiusMultiplier = 2.3f;
+	private const float FriendlyTotemRadiusMultiplier = CurseZoneRadiusMultiplier * 0.4f;
+	private const string FriendlySpellTotemMetadata = "Metadata/Monsters/Totems/SpellTotem";
 
     public override void DrawSettings()
     {
@@ -78,7 +81,13 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                 Height = windowRect.Size.Y
             };
 
-			if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Daemon, out var daemons) && daemons is not null)
+			var entityListWrapper = GameController.EntityListWrapper;
+			if (entityListWrapper is null)
+			{
+				return;
+			}
+
+			if (entityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Daemon, out var daemons) && daemons is not null)
 			{
                 //Metadata/Monsters/LeagueAbyss/Fodder/PaleWalker3/AbyssCrystalMine
                 
@@ -101,7 +110,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
                 }
 			}
 
-            if (!GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Effect, out var effects) || effects is null)
+            if (!entityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Effect, out var effects) || effects is null)
                 return;
 
             // Pass 0: metadata-driven hostiles that live under EntityType.Effect (e.g., ice spikes)
@@ -179,14 +188,14 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 
 			// Additional pass: Curse zones are unique under Metadata/Monsters/CurseZones and are EntityType.None
 			{
-				var noneEntities = (IReadOnlyList<Entity>)null;
-				if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.None, out var noneList) && noneList is not null)
+				IReadOnlyList<Entity>? noneEntities;
+				if (entityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.None, out var noneList) && noneList is not null)
 				{
 					noneEntities = noneList;
 				}
 				else
 				{
-					noneEntities = GameController?.EntityListWrapper?.OnlyValidEntities;
+					noneEntities = entityListWrapper.OnlyValidEntities;
 				}
 
 				if (noneEntities is not null)
@@ -201,19 +210,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 							if (!p.Contains("CurseZones", StringComparison.OrdinalIgnoreCase)) continue;
 							if (ent.DistancePlayer > Settings.RenderDistance) continue;
 
-							var positioned = ent.GetComponent<Positioned>();
-							var renderComp = ent.GetComponent<Render>();
-
-							float baseRadius = 0f;
-							if (renderComp is not null)
-							{
-								baseRadius = Math.Max(5f, renderComp.Bounds.X * 4f);
-							}
-							else if (positioned is not null)
-							{
-								baseRadius = Math.Max(5f, positioned.Size);
-							}
-							else
+							if (!TryGetWorldCircle(ent, out var worldPos, out var baseRadius))
 							{
 								continue;
 							}
@@ -258,7 +255,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 			// Carveout: Check EntityType.MonsterMods for Abyss Mines and Other Hostile Effects
 			// Some hostile effects (e.g., Metadata/Monsters/MonsterMods/LeagueAbyss/ExplosiveCrystalWaller/AbyssCrystalMine)
 			// appear as MonsterMods rather than Effect or None
-			if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.MonsterMods, out var monsterMods) && monsterMods is not null)
+			if (entityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.MonsterMods, out var monsterMods) && monsterMods is not null)
 			{
 				// Check Abyss Crystal Mines in MonsterMods
 				if (Settings.ShowAbyssCrystalMines)
@@ -284,7 +281,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 			}
 
 			// Carveout: BlackbloodRemnant abyss mines can be classified as Monster despite behaving like abyss objects.
-			if (GameController.EntityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Monster, out var monsters) && monsters is not null)
+			if (entityListWrapper.ValidEntitiesByType.TryGetValue(EntityType.Monster, out var monsters) && monsters is not null)
 			{
 				if (Settings.ShowAbyssCrystalMines)
 				{
@@ -294,6 +291,11 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 				if (Settings.ShowLightlessWells)
 				{
 					DrawLightlessWells(monsters, "LightlessWell[Monster]", screenRect);
+				}
+
+				if (Settings.ShowFriendlyTotems)
+				{
+					DrawFriendlyTotems(monsters, screenRect);
 				}
 			}
 		}
@@ -351,6 +353,52 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
 			overlayText: LightlessWellWarningText,
 			overlayTextColor: Settings.LightlessWellTextColor.Value,
 			colorOverride: Settings.LightlessWellColor.Value);
+	}
+
+	private void DrawFriendlyTotems(IEnumerable<Entity> entities, RectangleF screenRect)
+	{
+		foreach (var ent in entities)
+		{
+			var path = ent.Path;
+			if (!string.Equals(path, FriendlySpellTotemMetadata, StringComparison.OrdinalIgnoreCase)) continue;
+			if (ent.IsHostile) continue;
+			if (ent.DistancePlayer > Settings.RenderDistance) continue;
+			if (!TryGetWorldCircle(ent, out var worldPos, out var baseRadius)) continue;
+
+			DrawCircleInWorldPos(false, worldPos, baseRadius * FriendlyTotemRadiusMultiplier, 5, Settings.FriendlyTotemColor.Value, screenRect);
+
+			if (Settings.DebugMode)
+			{
+				var screen = Camera.WorldToScreen(worldPos);
+				Graphics.DrawText($"FriendlyTotem: {path}", screen);
+			}
+		}
+	}
+
+	private bool TryGetWorldCircle(Entity entity, out Vector3 worldPos, out float baseRadius)
+	{
+		var positioned = entity.GetComponent<Positioned>();
+		var renderComp = entity.GetComponent<Render>();
+
+		if (renderComp is not null)
+		{
+			baseRadius = Math.Max(5f, renderComp.Bounds.X * 4f);
+		}
+		else if (positioned is not null)
+		{
+			baseRadius = Math.Max(5f, positioned.Size);
+		}
+		else
+		{
+			worldPos = default;
+			baseRadius = 0f;
+			return false;
+		}
+
+		worldPos = positioned is not null
+			? GameController.IngameState.Data.ToWorldWithTerrainHeight(positioned.GridPosition)
+			: entity.Pos;
+		return true;
 	}
 
 	private void DrawMetadataMatches(IEnumerable<Entity> entities, IReadOnlyDictionary<string, Color> metadataTargets, float radiusMultiplier, Color fallbackColor, string debugLabel, RectangleF screenRect, bool requireHostile = false, string? overlayText = null, Color? overlayTextColor = null, Color? colorOverride = null)
