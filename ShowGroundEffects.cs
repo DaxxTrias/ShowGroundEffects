@@ -42,7 +42,7 @@ public class ShowGroundEffects : BaseSettingsPlugin<ShowGroundEffectsSettings>
     private long _lastDebugLogTicks;
     private static readonly long DebugLogIntervalTicks = TimeSpan.FromMilliseconds(500).Ticks;
 	private const float CurseZoneRadiusMultiplier = 2.3f;
-	private const float FriendlyTotemRadiusMultiplier = CurseZoneRadiusMultiplier * 0.4f;
+	private const float FriendlyTotemRadiusMultiplier = CurseZoneRadiusMultiplier * 0.1f;
 	private const float FriendlyTotemFallbackBaseRadius = 20f;
 	private const string FriendlySpellTotemMetadata = "Metadata/Monsters/Totems/SpellTotem";
 
